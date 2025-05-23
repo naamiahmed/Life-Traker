@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class StatisticsPage extends StatelessWidget {
   const StatisticsPage({Key? key}) : super(key: key);
@@ -7,38 +9,255 @@ class StatisticsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Statistics'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).primaryColor,
+        title: Text(
+          'Statistics',
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: () {
+              // Add date range selector
+            },
+          ),
+        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Theme.of(context).primaryColor,
+              Theme.of(context).scaffoldBackgroundColor,
+            ],
+          ),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildStatCards(),
+              const SizedBox(height: 24),
+              _buildWeeklyChart(context), // Pass context here
+              const SizedBox(height: 24),
+              _buildSectorPerformance(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCards() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.5,
+      children: [
+        _buildStatCard(
+          'Weekly Tasks',
+          '15/20',
+          Icons.check_circle,
+          Colors.green,
+          '75% Complete',
+        ),
+        _buildStatCard(
+          'Monthly Streak',
+          '5 Days',
+          Icons.local_fire_department,
+          Colors.orange,
+          'Personal Best!',
+        ),
+        _buildStatCard(
+          'Focus Time',
+          '12.5 hrs',
+          Icons.timer,
+          Colors.blue,
+          'This Week',
+        ),
+        _buildStatCard(
+          'Productivity',
+          '85%',
+          Icons.trending_up,
+          Colors.purple,
+          '↑ 15% from last week',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color, String subtitle) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.check_circle),
-                title: const Text('Weekly Completed Tasks'),
-                subtitle: const Text('15/20 tasks'),
+            Icon(icon, color: color, size: 30),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
             ),
-            const SizedBox(height: 16),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.local_fire_department),
-                title: const Text('Monthly Streak'),
-                subtitle: const Text('5 days'),
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
               ),
             ),
-            const SizedBox(height: 16),
-            Container(
-              height: 200,
-              color: Colors.grey[200],
-              alignment: Alignment.center,
-              child: const Text('Placeholder for Chart'),
+            Text(
+              subtitle,
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: Colors.grey[500],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // Modify the method signature to accept BuildContext
+  Widget _buildWeeklyChart(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Weekly Progress',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(show: false),
+                  titlesData: FlTitlesData(
+                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: [
+                        const FlSpot(0, 3),
+                        const FlSpot(1, 4),
+                        const FlSpot(2, 3.5),
+                        const FlSpot(3, 5),
+                        const FlSpot(4, 4),
+                        const FlSpot(5, 6),
+                        const FlSpot(6, 5.5),
+                      ],
+                      isCurved: true,
+                      color: Theme.of(context).primaryColor,
+                      barWidth: 3,
+                      dotData: FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: Theme.of(context).primaryColor.withOpacity(0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectorPerformance() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Sector Performance',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildSectorProgressBar('Diet', 0.85, Colors.green),
+            const SizedBox(height: 12),
+            _buildSectorProgressBar('Gym', 0.70, Colors.blue),
+            const SizedBox(height: 12),
+            _buildSectorProgressBar('Finance', 0.90, Colors.purple),
+            const SizedBox(height: 12),
+            _buildSectorProgressBar('Sleep', 0.65, Colors.indigo),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectorProgressBar(String sector, double progress, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              sector,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              '${(progress * 100).toInt()}%',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey[200],
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+            minHeight: 8,
+          ),
+        ),
+      ],
     );
   }
 }
