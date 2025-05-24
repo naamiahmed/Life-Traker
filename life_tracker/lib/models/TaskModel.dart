@@ -1,6 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
-part 'TaskModel.g.dart'; // Generated file
+part 'TaskModel.g.dart';
 
 @HiveType(typeId: 0)
 class TaskModel extends HiveObject {
@@ -13,5 +14,21 @@ class TaskModel extends HiveObject {
   @HiveField(2)
   bool isDone;
 
-  TaskModel({required this.name, required this.sector, this.isDone = false});
+  @HiveField(3)
+  DateTime date;
+
+  @HiveField(4)
+  String? description;
+
+  @HiveField(5)
+  TimeOfDay? scheduledTime;
+
+  TaskModel({
+    required this.name,
+    required this.sector,
+    required this.date,
+    this.isDone = false,
+    this.description,
+    this.scheduledTime,
+  });
 }

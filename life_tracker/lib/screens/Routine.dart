@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:life_tracker/models/TaskModel.dart';
+import 'package:life_tracker/services/TaskService.dart';
 
 class AddEditRoutinePage extends StatefulWidget {
   const AddEditRoutinePage({Key? key}) : super(key: key);
@@ -9,9 +11,12 @@ class AddEditRoutinePage extends StatefulWidget {
 }
 
 class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
+  final TaskService _taskService = TaskService();
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   String? selectedSector;
   TimeOfDay? selectedTime;
-  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +59,7 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
                   icon: Icons.task_alt,
                   validator: (value) =>
                       value?.isEmpty ?? true ? 'Please enter a task name' : null,
+                  controller: _nameController,
                 ),
                 const SizedBox(height: 20),
                 _buildSectorDropdown(),
@@ -64,6 +70,7 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
                   label: 'Description',
                   icon: Icons.description,
                   maxLines: 3,
+                  controller: _descriptionController,
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton(
@@ -95,8 +102,10 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
     required IconData icon,
     int maxLines = 1,
     String? Function(String?)? validator,
+    TextEditingController? controller,
   }) {
     return TextFormField(
+      controller: controller,
       maxLines: maxLines,
       validator: validator,
       decoration: InputDecoration(
@@ -179,10 +188,29 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
     );
   }
 
-  void _saveRoutine() {
+  void _saveRoutine() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // TODO: Implement save functionality
-      Navigator.pop(context);
+      try {
+        final task = TaskModel(
+          name: _nameController.text,
+          sector: selectedSector!,
+          date: DateTime.now(),
+          description: _descriptionController.text,
+          scheduledTime: selectedTime,
+        );
+
+        await _taskService.addTask(task);
+        if (mounted) {
+          Navigator.pop(context, true); // Pass true to indicate success
+        }
+      } catch (e) {
+        // Handle error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to save task')),
+          );
+        }
+      }
     }
   }
 }

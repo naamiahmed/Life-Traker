@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:life_tracker/models/TaskModel.dart';
+import 'package:life_tracker/screens/Routine.dart';
+import 'package:life_tracker/services/TaskService.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -9,138 +12,142 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final Map<String, bool> _tasks = {
-    'Breakfast': false,
-    'Gym': false,
-    'Prayer': false,
-    'Reading': false,
-    'Meditation': false,
-  };
+  final TaskService _taskService = TaskService();
+  List<TaskModel> _todaysTasks = [];
+  double _completionPercentage = 0.0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final tasks = await _taskService.getTodaysTasks();
+      final completion = await _taskService.getTodaysCompletion();
+
+      setState(() {
+        _todaysTasks = tasks;
+        _completionPercentage = completion;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      // Handle error appropriately
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
+        title: const Text('Today\'s Tasks'),
         elevation: 0,
-        backgroundColor: Colors.blue[700],
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'My Daily Tracker',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              DateFormat('EEEE, MMMM d').format(DateTime.now()),
-              style: const TextStyle(fontSize: 14),
-            ),
-          ],
-        ),
       ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.blue[700],
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
-              ),
-            ),
-            child: Row(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
               children: [
-                Expanded(
-                  child: Card(
-                    elevation: 4,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Daily Progress',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          LinearProgressIndicator(
-                            value: _tasks.values.where((v) => v).length / _tasks.length,
-                            backgroundColor: Colors.grey[200],
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.green[400]!),
-                          ),
-                        ],
-                      ),
-                    ),
+                // Progress Card
+                Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(15),
                   ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Today\'s Progress',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${_completionPercentage.toStringAsFixed(0)}%',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Tasks List
+                Expanded(
+                  child: _todaysTasks.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No tasks for today',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _todaysTasks.length,
+                          itemBuilder: (context, index) {
+                            final task = _todaysTasks[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                title: Text(
+                                  task.name,
+                                  style: TextStyle(
+                                    decoration:
+                                        task.isDone ? TextDecoration.lineThrough : null,
+                                  ),
+                                ),
+                                subtitle: Text(task.sector),
+                                leading: Icon(
+                                  _getIconForTask(task.sector),
+                                  color: Theme.of(context).primaryColor,
+                                ),
+                                trailing: Checkbox(
+                                  value: task.isDone,
+                                  onChanged: (bool? value) async {
+                                    if (value != null) {
+                                      await _taskService.updateTaskStatus(task, value);
+                                      _loadData();
+                                    }
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _tasks.length,
-              itemBuilder: (context, index) {
-                final task = _tasks.keys.elementAt(index);
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: CheckboxListTile(
-                    title: Text(
-                      task,
-                      style: TextStyle(
-                        decoration: _tasks[task]! ? TextDecoration.lineThrough : null,
-                        color: _tasks[task]! ? Colors.grey : Colors.black87,
-                      ),
-                    ),
-                    value: _tasks[task],
-                    activeColor: Colors.blue[700],
-                    onChanged: (bool? value) {
-                      setState(() {
-                        _tasks[task] = value!;
-                      });
-                    },
-                    secondary: CircleAvatar(
-                      backgroundColor: _tasks[task]! ? Colors.green[100] : Colors.grey[200],
-                      child: Icon(
-                        _getIconForTask(task),
-                        color: _tasks[task]! ? Colors.green : Colors.grey[600],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add new task functionality
+        onPressed: () async {
+          // Navigate to add task page
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddEditRoutinePage()),
+          );
+          if (result == true) {
+            _loadData();
+          }
         },
-        backgroundColor: Colors.blue[700],
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  IconData _getIconForTask(String task) {
-    switch (task.toLowerCase()) {
-      case 'breakfast':
-        return Icons.restaurant;
+  IconData _getIconForTask(String sector) {
+    switch (sector.toLowerCase()) {
+      case 'diet':
+        return Icons.restaurant_menu;
       case 'gym':
         return Icons.fitness_center;
-      case 'prayer':
-        return Icons.self_improvement;
-      case 'reading':
-        return Icons.book;
-      case 'meditation':
-        return Icons.spa;
+      case 'finance':
+        return Icons.account_balance_wallet;
+      case 'sleep':
+        return Icons.nightlight_round;
       default:
-        return Icons.check_circle;
+        return Icons.check_circle_outline;
     }
   }
 }
