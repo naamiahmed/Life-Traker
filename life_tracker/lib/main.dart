@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:life_tracker/screens/Welcome.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:life_tracker/models/TaskModel.dart';
 import 'screens/Home.dart';
 import 'screens/DailyTracker.dart';
 import 'screens/Sector.dart';
 import 'screens/Routine.dart';
 import 'screens/Statistics.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Hive
+  await Hive.initFlutter();
+  
+  // Register Hive Adapter
+  Hive.registerAdapter(TaskModelAdapter());
+  
+  // Open the box
+  await Hive.openBox<TaskModel>('tasks');
+  
+
   runApp(const MyApp());
 }
 

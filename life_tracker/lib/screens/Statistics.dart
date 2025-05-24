@@ -62,7 +62,8 @@ class StatisticsPage extends StatelessWidget {
       crossAxisCount: 2,
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      // Increase the childAspectRatio to give more height to the cards
+      childAspectRatio: 1.2, // Changed from 1.5
       children: [
         _buildStatCard(
           'Weekly Tasks',
@@ -101,16 +102,17 @@ class StatisticsPage extends StatelessWidget {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12), // Reduced padding from 16 to 12
         child: Column(
+          mainAxisSize: MainAxisSize.min, // Add this
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 30),
-            const SizedBox(height: 8),
+            Icon(icon, color: color, size: 24), // Reduced size from 30 to 24
+            const SizedBox(height: 4), // Reduced from 8 to 4
             Text(
               value,
               style: GoogleFonts.poppins(
-                fontSize: 24,
+                fontSize: 20, // Reduced from 24
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -118,16 +120,20 @@ class StatisticsPage extends StatelessWidget {
             Text(
               title,
               style: GoogleFonts.poppins(
-                fontSize: 14,
+                fontSize: 13, // Reduced from 14
                 color: Colors.grey[600],
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               subtitle,
               style: GoogleFonts.poppins(
-                fontSize: 12,
+                fontSize: 11, // Reduced from 12
                 color: Colors.grey[500],
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
