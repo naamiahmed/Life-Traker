@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:life_tracker/models/TaskModel.dart';
 import 'package:life_tracker/services/TaskService.dart';
+import 'package:life_tracker/services/SectorService.dart';
+import 'package:life_tracker/models/SectorModel.dart';
 import 'package:life_tracker/screens/Home.dart';
-import 'package:life_tracker/main.dart';  // Import MainScreen
+import 'package:life_tracker/main.dart';
 
 class AddEditRoutinePage extends StatefulWidget {
   const AddEditRoutinePage({Key? key}) : super(key: key);
@@ -14,12 +16,33 @@ class AddEditRoutinePage extends StatefulWidget {
 
 class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
   final TaskService _taskService = TaskService();
+  final SectorService _sectorService = SectorService();
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   String? selectedSector;
   TimeOfDay? selectedTime;
   bool _isLoading = false;
+  List<SectorModel> _sectors = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSectors();
+  }
+
+  Future<void> _loadSectors() async {
+    try {
+      final sectors = await _sectorService.getAllSectors();
+      setState(() {
+        _sectors = sectors;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load sectors')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -202,12 +225,19 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
         filled: true,
         fillColor: Colors.white.withOpacity(0.9),
       ),
-      items: const [
-        DropdownMenuItem(value: 'Diet', child: Text('Diet 🍎')),
-        DropdownMenuItem(value: 'Gym', child: Text('Gym 💪')),
-        DropdownMenuItem(value: 'Finance', child: Text('Finance 💰')),
-        DropdownMenuItem(value: 'Sleep', child: Text('Sleep 😴')),
-      ],
+      items: _sectors.map((sector) {
+        final icon = SectorService.getIconFromName(sector.iconName);
+        return DropdownMenuItem(
+          value: sector.name,
+          child: Row(
+            children: [
+              Icon(icon, size: 20),
+              const SizedBox(width: 8),
+              Text(sector.name),
+            ],
+          ),
+        );
+      }).toList(),
       onChanged: (value) => setState(() => selectedSector = value),
     );
   }
@@ -300,5 +330,12 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
         });
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

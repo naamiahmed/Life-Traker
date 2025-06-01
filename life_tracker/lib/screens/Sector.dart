@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:life_tracker/services/TaskService.dart';
+import 'package:life_tracker/services/SectorService.dart';
+import 'package:life_tracker/models/SectorModel.dart';
 
 class SectorOverviewPage extends StatefulWidget {
   const SectorOverviewPage({Key? key}) : super(key: key);
@@ -10,25 +12,33 @@ class SectorOverviewPage extends StatefulWidget {
 
 class _SectorOverviewPageState extends State<SectorOverviewPage> {
   final TaskService _taskService = TaskService();
+  final SectorService _sectorService = SectorService();
+  List<SectorModel> _sectors = [];
   Map<String, double> _sectorProgress = {};
   bool _isLoading = true;
+  final _formKey = GlobalKey<FormState>();
+  final _sectorNameController = TextEditingController();
+  String? _selectedIconName;
+  String? _selectedColorName;
 
   @override
   void initState() {
     super.initState();
-    _loadSectorProgress();
+    _loadSectors();
   }
 
-  Future<void> _loadSectorProgress() async {
+  Future<void> _loadSectors() async {
     if (!mounted) return;
 
     setState(() => _isLoading = true);
     try {
+      final sectors = await _sectorService.getAllSectors();
       final progress = await _taskService.getSectorCompletionRates();
 
       if (!mounted) return;
 
       setState(() {
+        _sectors = sectors;
         _sectorProgress = progress;
         _isLoading = false;
       });
@@ -36,9 +46,200 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load sector progress')),
+        const SnackBar(content: Text('Failed to load sectors')),
       );
     }
+  }
+
+  Future<void> _showAddSectorDialog() async {
+    _sectorNameController.clear();
+    _selectedIconName = null;
+    _selectedColorName = null;
+    
+    return showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add New Sector'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _sectorNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Sector Name',
+                      hintText: 'Enter sector name',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a sector name';
+                      }
+                      if (_sectors.any((s) => s.name == value)) {
+                        return 'This sector already exists';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Select Icon'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: SectorService.getAvailableIcons().map((iconData) {
+                      return InkWell(
+                        onTap: () {
+                          setState(() => _selectedIconName = iconData['name'] as String);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _selectedIconName == iconData['name']
+                                ? Theme.of(context).primaryColor.withOpacity(0.1)
+                                : null,
+                            border: Border.all(
+                              color: _selectedIconName == iconData['name']
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(iconData['icon'] as IconData),
+                              const SizedBox(height: 4),
+                              Text(
+                                iconData['label'] as String,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Select Color'),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: SectorService.getAvailableColors().map((colorData) {
+                      return InkWell(
+                        onTap: () {
+                          setState(() => _selectedColorName = colorData['name'] as String);
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: colorData['color'] as Color,
+                            border: Border.all(
+                              color: _selectedColorName == colorData['name']
+                                  ? Colors.white
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (_formKey.currentState?.validate() ?? false) {
+                  if (_selectedIconName == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please select an icon')),
+                    );
+                    return;
+                  }
+                  if (_selectedColorName == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please select a color')),
+                    );
+                    return;
+                  }
+
+                  final newSector = SectorModel(
+                    name: _sectorNameController.text,
+                    iconName: _selectedIconName!,
+                    colorName: _selectedColorName!,
+                  );
+
+                  final success = await _sectorService.addSector(newSector);
+                  
+                  if (!mounted) return;
+                  
+                  if (success) {
+                    Navigator.pop(context);
+                    _loadSectors();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Sector "${newSector.name}" created')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to create sector')),
+                    );
+                  }
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirmation(SectorModel sector) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Sector'),
+        content: Text('Are you sure you want to delete the "${sector.name}" sector?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final success = await _sectorService.deleteSector(sector);
+              
+              if (!mounted) return;
+              
+              if (success) {
+                Navigator.pop(context);
+                _loadSectors();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Sector "${sector.name}" deleted')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to delete sector')),
+                );
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -76,12 +277,12 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
         ),
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
-            : _sectorProgress.isEmpty
-                ? const Center(child: Text('No sector progress found'))
+            : _sectors.isEmpty
+                ? const Center(child: Text('No sectors found'))
                 : Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: GridView.builder(
-                      itemCount: _sectorProgress.length,
+                      itemCount: _sectors.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
@@ -90,30 +291,28 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
                         childAspectRatio: 1.0,
                       ),
                       itemBuilder: (context, index) {
-                        final sector = _sectorProgress.keys.elementAt(index);
-                        final progress = _sectorProgress[sector] ?? 0.0;
+                        final sector = _sectors[index];
+                        final progress = _sectorProgress[sector.name] ?? 0.0;
                         return _buildSectorCard(
                           context,
                           sector,
-                          _getIconForSector(sector),
-                          _getColorForSector(sector),
-                          '${(progress * 100).toStringAsFixed(0)}%',
+                          progress,
                         );
                       },
                     ),
                   ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add new sector functionality
-        },
+        onPressed: _showAddSectorDialog,
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildSectorCard(BuildContext context, String title, IconData icon,
-      Color color, String progress) {
+  Widget _buildSectorCard(BuildContext context, SectorModel sector, double progress) {
+    final color = SectorService.getColorFromName(sector.colorName);
+    final icon = SectorService.getIconFromName(sector.iconName);
+    
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -123,6 +322,7 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
         onTap: () {
           // Navigate to sector detail
         },
+        onLongPress: () => _showDeleteConfirmation(sector),
         borderRadius: BorderRadius.circular(15),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -148,7 +348,7 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                title,
+                sector.name,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white,
@@ -167,7 +367,7 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  progress,
+                  '${(progress * 100).toStringAsFixed(0)}%',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -182,33 +382,9 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
     );
   }
 
-  IconData _getIconForSector(String sector) {
-    switch (sector) {
-      case 'Diet':
-        return Icons.restaurant_menu;
-      case 'Gym':
-        return Icons.fitness_center;
-      case 'Finance':
-        return Icons.account_balance_wallet;
-      case 'Sleep':
-        return Icons.nightlight_round;
-      default:
-        return Icons.help_outline;
-    }
-  }
-
-  Color _getColorForSector(String sector) {
-    switch (sector) {
-      case 'Diet':
-        return Colors.green.shade400;
-      case 'Gym':
-        return Colors.blue.shade400;
-      case 'Finance':
-        return Colors.purple.shade400;
-      case 'Sleep':
-        return Colors.indigo.shade400;
-      default:
-        return Colors.grey.shade400;
-    }
+  @override
+  void dispose() {
+    _sectorNameController.dispose();
+    super.dispose();
   }
 }

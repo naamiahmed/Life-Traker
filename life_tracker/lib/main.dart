@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:life_tracker/screens/Welcome.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:life_tracker/models/TaskModel.dart';
+import 'package:life_tracker/models/SectorModel.dart';
 import 'screens/Home.dart';
 import 'screens/DailyTracker.dart';
 import 'screens/Sector.dart';
@@ -18,10 +19,11 @@ void main() async {
   // Register Hive Adapters
   Hive.registerAdapter(TimeOfDayAdapter());
   Hive.registerAdapter(TaskModelAdapter());
+  Hive.registerAdapter(SectorModelAdapter());
   
-  // Open the box
+  // Open the boxes
   await Hive.openBox<TaskModel>('tasks');
-  
+  await Hive.openBox<SectorModel>('sectors');
 
   runApp(const MyApp());
 }
