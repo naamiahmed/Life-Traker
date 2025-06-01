@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:life_tracker/models/TaskModel.dart';
 import 'package:life_tracker/services/TaskService.dart';
 import 'package:life_tracker/screens/Home.dart';
+import 'package:life_tracker/main.dart';  // Import MainScreen
 
 class AddEditRoutinePage extends StatefulWidget {
   const AddEditRoutinePage({Key? key}) : super(key: key);
@@ -276,12 +277,12 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
         ),
       );
       
-      // Navigate to HomePage
+      // Navigate to MainScreen instead of HomePage
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-        (route) => false, // This will remove all routes from the stack
+        MaterialPageRoute(builder: (context) => const MainScreen()),
+        (route) => false,
       );
     } catch (e) {
       if (!mounted) return;
