@@ -7,6 +7,7 @@ import 'screens/DailyTracker.dart';
 import 'screens/Sector.dart';
 import 'screens/Routine.dart';
 import 'screens/Statistics.dart';
+import 'package:life_tracker/adapters/time_of_day_adapter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,7 +15,8 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   
-  // Register Hive Adapter
+  // Register Hive Adapters
+  Hive.registerAdapter(TimeOfDayAdapter());
   Hive.registerAdapter(TaskModelAdapter());
   
   // Open the box
