@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:life_tracker/models/TaskModel.dart';
+import 'package:life_tracker/providers/ThemeProvider.dart';
 import 'package:life_tracker/screens/Routine.dart';
 import 'package:life_tracker/screens/extra/Settings.dart';
 import 'package:life_tracker/screens/extra/profile.dart';
@@ -16,6 +18,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final TaskService _taskService = TaskService();
   List<TaskModel> _todaysTasks = [];
+  Map<String, List<TaskModel>> _groupedTasks = {};
   double _completionPercentage = 0.0;
   bool _isLoading = true;
 
@@ -23,6 +26,16 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  void _groupTasksBySector() {
+    _groupedTasks = {};
+    for (var task in _todaysTasks) {
+      if (!_groupedTasks.containsKey(task.sector)) {
+        _groupedTasks[task.sector] = [];
+      }
+      _groupedTasks[task.sector]!.add(task);
+    }
   }
 
   Future<void> _loadData() async {
@@ -33,6 +46,7 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         _todaysTasks = tasks;
+        _groupTasksBySector();
         _completionPercentage = completion;
         _isLoading = false;
       });
@@ -44,6 +58,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Scaffold(
       appBar: AppBar(
         leading: Builder(
@@ -59,8 +75,16 @@ class _HomePageState extends State<HomePage> {
             fontSize: 24,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: Colors.white,
+            ),
+            onPressed: () => themeProvider.toggleTheme(),
+          ),
+        ],
         elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
       ),
       drawer: Drawer(
         child: Container(
@@ -166,7 +190,7 @@ class _HomePageState extends State<HomePage> {
                     margin: const EdgeInsets.all(24),
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Theme.of(context).cardTheme.color?.withOpacity(0.9),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: Column(
@@ -203,38 +227,67 @@ class _HomePageState extends State<HomePage> {
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
-                            itemCount: _todaysTasks.length,
+                            itemCount: _groupedTasks.length,
                             itemBuilder: (context, index) {
-                              final task = _todaysTasks[index];
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.9),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: ListTile(
-                                  title: Text(
-                                    task.name,
-                                    style: TextStyle(
-                                      decoration: task.isDone ? TextDecoration.lineThrough : null,
-                                      fontWeight: FontWeight.w500,
+                              final sector = _groupedTasks.keys.elementAt(index);
+                              final sectorTasks = _groupedTasks[sector]!;
+                              
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          _getIconForTask(sector),
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          sector,
+                                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  subtitle: Text(task.sector),
-                                  leading: Icon(
-                                    _getIconForTask(task.sector),
-                                    color: Theme.of(context).primaryColor,
-                                  ),
-                                  trailing: Checkbox(
-                                    value: task.isDone,
-                                    onChanged: (bool? value) async {
-                                      if (value != null) {
-                                        await _taskService.updateTaskStatus(task, value);
-                                        _loadData();
-                                      }
-                                    },
-                                  ),
-                                ),
+                                  ...sectorTasks.map((task) => Container(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).cardTheme.color?.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ListTile(
+                                      title: Text(
+                                        task.name,
+                                        style: TextStyle(
+                                          decoration: task.isDone ? TextDecoration.lineThrough : null,
+                                          fontWeight: FontWeight.w500,
+                                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        task.description ?? '',
+                                        style: TextStyle(
+                                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                                        ),
+                                      ),
+                                      trailing: Checkbox(
+                                        value: task.isDone,
+                                        onChanged: (bool? value) async {
+                                          if (value != null) {
+                                            await _taskService.updateTaskStatus(task, value);
+                                            _loadData();
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  )).toList(),
+                                  const SizedBox(height: 16),
+                                ],
                               );
                             },
                           ),

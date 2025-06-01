@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:life_tracker/providers/ThemeProvider.dart';
 import 'package:life_tracker/screens/Welcome.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:life_tracker/models/TaskModel.dart';
@@ -25,7 +27,12 @@ void main() async {
   await Hive.openBox<TaskModel>('tasks');
   await Hive.openBox<SectorModel>('sectors');
 
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -33,13 +40,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Life Tracker',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const WelcomePage(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Life Tracker',
+          theme: themeProvider.lightTheme,
+          darkTheme: themeProvider.darkTheme,
+          themeMode: themeProvider.themeMode,
+          home: const WelcomePage(),
+        );
+      },
     );
   }
 }
