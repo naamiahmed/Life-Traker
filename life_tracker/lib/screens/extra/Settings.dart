@@ -1,7 +1,98 @@
 import 'package:flutter/material.dart';
+import '../../utils/data_initializer.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
+
+  @override
+  _SettingsPageState createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool _isLoading = false;
+
+  Future<void> _initializeDemoData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      await DataInitializer.initializeDemo();
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Demo data initialized successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to initialize demo data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _clearAllData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Data'),
+        content: const Text(
+          'This will permanently delete all sectors and tasks. This action cannot be undone. Are you sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+    
+    try {
+      await DataInitializer.clearAllData();
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All data cleared successfully!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to clear data: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,48 +118,46 @@ class SettingsPage extends StatelessWidget {
               Theme.of(context).scaffoldBackgroundColor,
             ],
           ),
-        ),
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            _buildSettingCard(
-              context,
-              'Notifications',
-              Icons.notifications,
-              'Manage your notification preferences',
-              onTap: () {
-                // Handle notifications settings
-              },
-            ),
-            _buildSettingCard(
-              context,
-              'Theme',
-              Icons.palette,
-              'Change app theme',
-              onTap: () {
-                // Handle theme settings
-              },
-            ),
-            _buildSettingCard(
-              context,
-              'Privacy',
-              Icons.security,
-              'Manage your privacy settings',
-              onTap: () {
-                // Handle privacy settings
-              },
-            ),
-            _buildSettingCard(
-              context,
-              'About',
-              Icons.info,
-              'About Life Tracker',
-              onTap: () {
-                // Handle about section
-              },
-            ),
-          ],
-        ),
+        ),        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.all(16.0),
+                children: [
+                  _buildSettingCard(
+                    context,
+                    'Initialize Demo Data',
+                    Icons.data_usage,
+                    'Load sample sectors and tasks to explore features',
+                    onTap: _initializeDemoData,
+                  ),                  _buildSettingCard(
+                    context,
+                    'Clear All Data',
+                    Icons.delete_forever,
+                    'Permanently delete all sectors and tasks',
+                    onTap: _clearAllData,
+                  ),
+                  _buildSettingCard(
+                    context,
+                    'Theme',
+                    Icons.palette,
+                    'Change app theme (Coming soon)',
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Theme settings coming soon!')),
+                      );
+                    },
+                  ),
+                  _buildSettingCard(
+                    context,
+                    'About',
+                    Icons.info,
+                    'About Life Tracker',
+                    onTap: () {
+                      _showAboutDialog();
+                    },
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -107,7 +196,43 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
         trailing: const Icon(Icons.arrow_forward_ios),
-        onTap: onTap,
+        onTap: onTap,      ),
+    );
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('About Life Tracker'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Life Tracker v1.0.0',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 12),
+            Text('A comprehensive task tracking app that helps you organize your life across different sectors.'),
+            SizedBox(height: 12),
+            Text('Built with Flutter and uses Hive for local data storage.'),
+            SizedBox(height: 12),
+            Text('Features:'),
+            SizedBox(height: 4),
+            Text('• Sector-based task organization'),
+            Text('• Daily progress tracking'),
+            Text('• Detailed statistics and analytics'),
+            Text('• Streak monitoring'),
+            Text('• Local data storage (no internet required)'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
