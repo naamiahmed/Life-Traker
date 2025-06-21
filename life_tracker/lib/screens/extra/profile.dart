@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../Statistics.dart';
 import '../../services/TaskService.dart';
 import '../../services/SectorService.dart';
+import '../../services/UserService.dart';
+import '../../models/UserModel.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -13,10 +15,13 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final TaskService _taskService = TaskService();
   final SectorService _sectorService = SectorService();
+  final UserService _userService = UserService();
   
   int _totalTasksCompleted = 0;
   int _currentStreak = 0;
   int _totalSectors = 0;
+  String _userName = 'Life Tracker User';
+  String _profileIconName = 'person';
   bool _isLoading = true;
 
   @override
@@ -24,7 +29,6 @@ class _ProfilePageState extends State<ProfilePage> {
     super.initState();
     _loadUserStats();
   }
-
   Future<void> _loadUserStats() async {
     setState(() => _isLoading = true);
     
@@ -33,11 +37,14 @@ class _ProfilePageState extends State<ProfilePage> {
       final completedTasks = allTasks.where((task) => task.isDone).length;
       final streak = await _taskService.getCurrentStreak();
       final sectors = await _sectorService.getAllSectors();
+      final userData = await _userService.getUserData();
 
       setState(() {
         _totalTasksCompleted = completedTasks;
         _currentStreak = streak;
         _totalSectors = sectors.length;
+        _userName = userData.name;
+        _profileIconName = userData.profileIconName;
         _isLoading = false;
       });
     } catch (e) {
@@ -79,26 +86,51 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: Column(
-                    children: [
-                      const SizedBox(height: 20),
+                    children: [                      const SizedBox(height: 20),
                       // Profile Picture
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.person,
-                          size: 60,
-                          color: Theme.of(context).primaryColor,
+                      GestureDetector(
+                        onTap: _showIconPicker,
+                        child: CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.white,
+                          child: Icon(
+                            UserModel.getIconFromName(_profileIconName),
+                            size: 60,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to change icon',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.6),
                         ),
                       ),
                       const SizedBox(height: 20),
                       // User Name
-                      Text(
-                        'Life Tracker User',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.titleLarge?.color,
+                      GestureDetector(
+                        onTap: _showNameEditor,
+                        child: Column(
+                          children: [
+                            Text(
+                              _userName,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).textTheme.titleLarge?.color,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Tap to edit name',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -121,9 +153,16 @@ class _ProfilePageState extends State<ProfilePage> {
                             _buildStatCard(context, 'Total\nSectors', '$_totalSectors'),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 30),
+                      ),                      const SizedBox(height: 30),
                       // Profile Options
+                      _buildProfileOption(
+                        context,
+                        'Edit Profile',
+                        Icons.edit,
+                        () {
+                          _showEditProfileOptions();
+                        },
+                      ),
                       _buildProfileOption(
                         context,
                         'View Statistics',
@@ -305,6 +344,159 @@ class _ProfilePageState extends State<ProfilePage> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Got it!'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show edit profile options
+  void _showEditProfileOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Edit Profile',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Change Name'),
+              onTap: () {
+                Navigator.pop(context);
+                _showNameEditor();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.face),
+              title: const Text('Change Profile Icon'),
+              onTap: () {
+                Navigator.pop(context);
+                _showIconPicker();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Show name editor dialog
+  void _showNameEditor() {
+    final TextEditingController nameController = TextEditingController(text: _userName);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Name'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Your Name',
+            hintText: 'Enter your name',
+          ),
+          maxLength: 50,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newName = nameController.text.trim();
+              if (newName.isNotEmpty) {
+                final success = await _userService.updateUserName(newName);
+                Navigator.pop(context);
+                
+                if (success) {
+                  setState(() {
+                    _userName = newName;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Name updated successfully!')),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to update name')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Show icon picker dialog
+  void _showIconPicker() {
+    final availableIcons = UserModel.getAvailableIcons();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose Profile Icon'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: GridView.builder(
+            shrinkWrap: true,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: availableIcons.length,
+            itemBuilder: (context, index) {
+              final iconData = availableIcons[index];
+              final isSelected = iconData['name'] == _profileIconName;
+              
+              return GestureDetector(
+                onTap: () async {
+                  final success = await _userService.updateProfileIcon(iconData['name']);
+                  Navigator.pop(context);
+                  
+                  if (success) {
+                    setState(() {
+                      _profileIconName = iconData['name'];
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Profile icon updated!')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to update icon')),
+                    );
+                  }
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    iconData['icon'],
+                    size: 30,
+                    color: isSelected ? Colors.white : Theme.of(context).primaryColor,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
         ],
       ),

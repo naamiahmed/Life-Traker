@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:life_tracker/models/TaskModel.dart';
+import 'package:life_tracker/models/UserModel.dart';
 import 'package:life_tracker/providers/ThemeProvider.dart';
 import 'package:life_tracker/screens/Routine.dart';
 import 'package:life_tracker/screens/extra/Settings.dart';
 import 'package:life_tracker/screens/extra/profile.dart';
 import 'package:life_tracker/services/TaskService.dart';
+import 'package:life_tracker/services/UserService.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -17,9 +18,12 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TaskService _taskService = TaskService();
+  final UserService _userService = UserService();
   List<TaskModel> _todaysTasks = [];
   Map<String, List<TaskModel>> _groupedTasks = {};
   double _completionPercentage = 0.0;
+  String _userName = 'Life Tracker User';
+  String _profileIconName = 'person';
   bool _isLoading = true;
 
   @override
@@ -37,17 +41,19 @@ class _HomePageState extends State<HomePage> {
       _groupedTasks[task.sector]!.add(task);
     }
   }
-
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
       final tasks = await _taskService.getTodaysTasks();
       final completion = await _taskService.getTodaysCompletion();
+      final userData = await _userService.getUserData();
 
       setState(() {
         _todaysTasks = tasks;
         _groupTasksBySector();
         _completionPercentage = completion;
+        _userName = userData.name;
+        _profileIconName = userData.profileIconName;
         _isLoading = false;
       });
     } catch (e) {
@@ -95,47 +101,49 @@ class _HomePageState extends State<HomePage> {
               DrawerHeader(
                 decoration: BoxDecoration(
                   color: Theme.of(context).primaryColor,
-                ),
-                child: Column(
+                ),                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 30,
                       backgroundColor: Colors.white,
                       child: Icon(
-                        Icons.person,
+                        UserModel.getIconFromName(_profileIconName),
                         size: 35,
                         color: Colors.grey,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      'John Doe',
-                      style: TextStyle(
+                    Text(
+                      _userName,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      'john.doe@example.com',
+                    const Text(
+                      'Keep tracking your progress!',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white70,
                         fontSize: 14,
                       ),
                     ),
                   ],
                 ),
-              ),
-              ListTile(
+              ),              ListTile(
                 leading: const Icon(Icons.person),
                 title: const Text('Profile'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context); // Close drawer
-                  Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const ProfilePage()),
                   );
+                  // Refresh data when returning from profile page
+                  if (result == true || result == null) {
+                    _loadData();
+                  }
                 },
               ),
               ListTile(
