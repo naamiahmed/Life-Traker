@@ -192,11 +192,12 @@ class _SettingsPageState extends State<SettingsPage> {
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: Colors.grey[600],
+            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
           ),
         ),
         trailing: const Icon(Icons.arrow_forward_ios),
-        onTap: onTap,      ),
+        onTap: onTap,
+      ),
     );
   }
 
@@ -204,27 +205,75 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About Life Tracker'),
-        content: const Column(
+        title: Text(
+          'About Life Tracker',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.titleLarge?.color,
+          ),
+        ),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Life Tracker v1.0.0',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
             ),
-            SizedBox(height: 12),
-            Text('A comprehensive task tracking app that helps you organize your life across different sectors.'),
-            SizedBox(height: 12),
-            Text('Built with Flutter and uses Hive for local data storage.'),
-            SizedBox(height: 12),
-            Text('Features:'),
-            SizedBox(height: 4),
-            Text('• Sector-based task organization'),
-            Text('• Daily progress tracking'),
-            Text('• Detailed statistics and analytics'),
-            Text('• Streak monitoring'),
-            Text('• Local data storage (no internet required)'),
+            const SizedBox(height: 12),
+            Text(
+              'A comprehensive task tracking app that helps you organize your life across different sectors.',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Built with Flutter and uses Hive for local data storage.',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Features:',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '• Sector-based task organization',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+            Text(
+              '• Daily progress tracking',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+            Text(
+              '• Detailed statistics and analytics',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+            Text(
+              '• Streak monitoring',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+            Text(
+              '• Local data storage (no internet required)',
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
           ],
         ),
         actions: [

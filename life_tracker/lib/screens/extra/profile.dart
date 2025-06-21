@@ -93,12 +93,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                       const SizedBox(height: 20),
                       // User Name
-                      const Text(
+                      Text(
                         'Life Tracker User',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).textTheme.titleLarge?.color,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -107,7 +107,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         'Keep tracking your progress!',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.white.withOpacity(0.8),
+                          color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.8),
                         ),
                       ),
                       const SizedBox(height: 30),
@@ -189,7 +189,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
                 ),
               ),
             ],
@@ -208,19 +208,20 @@ class _ProfilePageState extends State<ProfilePage> {
     return ListTile(
       leading: Icon(
         icon,
-        color: Colors.white,
+        color: Theme.of(context).primaryColor,
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: Theme.of(context).textTheme.bodyLarge?.color,
           fontSize: 16,
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.arrow_forward_ios,
-        color: Colors.white,
-      ),      onTap: onTap,
+        color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6),
+      ),
+      onTap: onTap,
     );
   }
 
