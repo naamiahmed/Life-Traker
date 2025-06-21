@@ -13,7 +13,6 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
   final TaskService _taskService = TaskService();
   List<Map<String, dynamic>> _dailyData = [];
   bool _isLoading = true;
-  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -73,10 +72,8 @@ class _DailyTrackerPageState extends State<DailyTrackerPage> {
       return '${months[date.month - 1]} ${date.day}';
     }
   }
-
   Future<void> _showTasksForDate(Map<String, dynamic> dayData) async {
     final tasks = dayData['tasks'] as List<TaskModel>;
-    final date = dayData['date'] as DateTime;
     
     showModalBottomSheet(
       context: context,
