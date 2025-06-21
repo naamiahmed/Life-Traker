@@ -136,7 +136,7 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
@@ -148,20 +148,24 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor,
+                            ),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Text(
                           'Saving task...',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
+                            color: Theme.of(context).textTheme.bodyMedium?.color,
                           ),
                         ),
                       ],
@@ -193,11 +197,11 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
           borderRadius: BorderRadius.circular(12),
         ),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.9),
+        fillColor: Theme.of(context).cardColor,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).dividerColor,
           ),
         ),
         focusedBorder: OutlineInputBorder(
@@ -223,7 +227,20 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
           borderRadius: BorderRadius.circular(12),
         ),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.9),
+        fillColor: Theme.of(context).cardColor,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).dividerColor,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).primaryColor,
+            width: 2,
+          ),
+        ),
       ),
       items: _sectors.map((sector) {
         final icon = SectorService.getIconFromName(sector.iconName);
@@ -261,12 +278,27 @@ class _AddEditRoutinePageState extends State<AddEditRoutinePage> {
             borderRadius: BorderRadius.circular(12),
           ),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.9),
+          fillColor: Theme.of(context).cardColor,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).dividerColor,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Theme.of(context).primaryColor,
+              width: 2,
+            ),
+          ),
         ),
         child: Text(
           selectedTime?.format(context) ?? 'Select Time',
           style: TextStyle(
-            color: selectedTime == null ? Colors.grey.shade600 : Colors.black,
+            color: selectedTime == null 
+                ? Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.6)
+                : Theme.of(context).textTheme.bodyMedium?.color,
           ),
         ),
       ),
