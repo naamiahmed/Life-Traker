@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:life_tracker/services/TaskService.dart';
 import 'package:life_tracker/services/SectorService.dart';
 import 'package:life_tracker/models/SectorModel.dart';
+import 'package:life_tracker/screens/Settings.dart';
 
 class SectorOverviewPage extends StatefulWidget {
   const SectorOverviewPage({Key? key}) : super(key: key);
@@ -241,6 +242,159 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
       ),
     );
   }
+  Future<void> _navigateToSectorDetail(SectorModel sector) async {
+    // Get tasks for this sector
+    final allTasks = await _taskService.getAllTasks();
+    final sectorTasks = allTasks.where((task) => task.sector == sector.name).toList();
+    
+    if (!mounted) return;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: SectorService.getColorFromName(sector.colorName),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        SectorService.getIconFromName(sector.iconName),
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            sector.name,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${sectorTasks.length} tasks',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              // Tasks list
+              Expanded(
+                child: sectorTasks.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No tasks in this sector',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: sectorTasks.length,
+                        itemBuilder: (context, index) {
+                          final task = sectorTasks[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: ListTile(
+                              leading: Checkbox(
+                                value: task.isDone,
+                                onChanged: (value) async {
+                                  await _taskService.updateTaskStatus(task, value ?? false);
+                                  _loadSectors(); // Refresh the sector progress
+                                  Navigator.pop(context);
+                                  _navigateToSectorDetail(sector); // Reopen with updated data
+                                },
+                              ),
+                              title: Text(
+                                task.name,
+                                style: TextStyle(
+                                  decoration: task.isDone ? TextDecoration.lineThrough : null,
+                                  color: task.isDone ? Colors.grey : null,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Date: ${task.date.day}/${task.date.month}/${task.date.year}',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  if (task.description != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      task.description!,
+                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                    ),
+                                  ],
+                                  if (task.scheduledTime != null) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Time: ${task.scheduledTime!.format(context)}',
+                                      style: const TextStyle(fontSize: 12, color: Colors.blue),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,12 +408,14 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
-        ),
-        actions: [
+        ),        actions: [
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              // Add settings functionality
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
+              );
             },
           ),
         ],
@@ -317,10 +473,10 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
       elevation: 4,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-      ),
-      child: InkWell(
+      ),      child: InkWell(
         onTap: () {
-          // Navigate to sector detail
+          // Navigate to sector detail with tasks
+          _navigateToSectorDetail(sector);
         },
         onLongPress: () => _showDeleteConfirmation(sector),
         borderRadius: BorderRadius.circular(15),
@@ -379,9 +535,7 @@ class _SectorOverviewPageState extends State<SectorOverviewPage> {
           ),
         ),
       ),
-    );
-  }
-
+    );  }
   @override
   void dispose() {
     _sectorNameController.dispose();

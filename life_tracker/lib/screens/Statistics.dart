@@ -1,10 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:life_tracker/services/TaskService.dart';
+import 'package:life_tracker/services/SectorService.dart';
 
-class StatisticsPage extends StatelessWidget {
+class StatisticsPage extends StatefulWidget {
   const StatisticsPage({Key? key}) : super(key: key);
 
+  @override
+  _StatisticsPageState createState() => _StatisticsPageState();
+}
+
+class _StatisticsPageState extends State<StatisticsPage> {
+  final TaskService _taskService = TaskService();
+  
+  bool _isLoading = true;
+  Map<String, dynamic> _statsData = {};
+  List<Map<String, dynamic>> _weeklyData = [];
+  Map<String, double> _sectorPerformance = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatistics();
+  }
+
+  Future<void> _loadStatistics() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Load all statistics data
+      final weeklyTasks = await _taskService.getWeeklyTasks();
+      final completedWeekly = weeklyTasks.where((task) => task.isDone).length;
+      final streak = await _taskService.getCurrentStreak();
+      final focusTime = await _taskService.getWeeklyFocusTime();
+      final productivityTrend = await _taskService.getProductivityTrend();
+      final weeklyCompletionData = await _taskService.getWeeklyCompletionData();
+      final sectorPerformance = await _taskService.getSectorPerformanceLast30Days();
+
+      setState(() {
+        _statsData = {
+          'weeklyCompleted': completedWeekly,
+          'weeklyTotal': weeklyTasks.length,
+          'streak': streak,
+          'focusTime': focusTime,
+          'productivityTrend': productivityTrend,
+        };
+        _weeklyData = weeklyCompletionData;
+        _sectorPerformance = sectorPerformance;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to load statistics')),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,10 +72,8 @@ class StatisticsPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: () {
-              // Add date range selector
-            },
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadStatistics,
           ),
         ],
       ),
@@ -38,60 +88,73 @@ class StatisticsPage extends StatelessWidget {
             ],
           ),
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildStatCards(),
-              const SizedBox(height: 24),
-              _buildWeeklyChart(context), // Pass context here
-              const SizedBox(height: 24),
-              _buildSectorPerformance(),
-            ],
-          ),
-        ),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildStatCards(),
+                    const SizedBox(height: 24),
+                    _buildWeeklyChart(context),
+                    const SizedBox(height: 24),
+                    _buildSectorPerformance(),
+                  ],
+                ),
+              ),
       ),
     );
   }
-
   Widget _buildStatCards() {
+    final weeklyCompleted = _statsData['weeklyCompleted'] ?? 0;
+    final weeklyTotal = _statsData['weeklyTotal'] ?? 0;
+    final streak = _statsData['streak'] ?? 0;
+    final focusTime = _statsData['focusTime'] ?? 0.0;
+    final productivityTrend = _statsData['productivityTrend'] ?? 0.0;
+    
+    final weeklyPercentage = weeklyTotal > 0 ? ((weeklyCompleted / weeklyTotal) * 100).round() : 0;
+    final trendText = productivityTrend > 0 
+        ? '↑ ${productivityTrend.toStringAsFixed(1)}% from last week'
+        : productivityTrend < 0 
+            ? '↓ ${(-productivityTrend).toStringAsFixed(1)}% from last week'
+            : 'Same as last week';
+    
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      // Increase the childAspectRatio to give more height to the cards
-      childAspectRatio: 1.2, // Changed from 1.5
+      childAspectRatio: 1.2,
       children: [
         _buildStatCard(
           'Weekly Tasks',
-          '15/20',
+          '$weeklyCompleted/$weeklyTotal',
           Icons.check_circle,
           Colors.green,
-          '75% Complete',
+          '$weeklyPercentage% Complete',
         ),
         _buildStatCard(
-          'Monthly Streak',
-          '5 Days',
+          'Current Streak',
+          '$streak Days',
           Icons.local_fire_department,
           Colors.orange,
-          'Personal Best!',
+          streak > 7 ? 'Great job!' : 'Keep going!',
         ),
         _buildStatCard(
           'Focus Time',
-          '12.5 hrs',
+          '${focusTime.toStringAsFixed(1)} hrs',
           Icons.timer,
           Colors.blue,
           'This Week',
         ),
         _buildStatCard(
           'Productivity',
-          '85%',
+          '$weeklyPercentage%',
           Icons.trending_up,
-          Colors.purple,
-          '↑ 15% from last week',
+          productivityTrend >= 0 ? Colors.purple : Colors.red,
+          trendText,
         ),
       ],
     );
@@ -140,8 +203,6 @@ class StatisticsPage extends StatelessWidget {
       ),
     );
   }
-
-  // Modify the method signature to accept BuildContext
   Widget _buildWeeklyChart(BuildContext context) {
     return Card(
       elevation: 4,
@@ -161,44 +222,59 @@ class StatisticsPage extends StatelessWidget {
             const SizedBox(height: 24),
             SizedBox(
               height: 200,
-              child: LineChart(
-                LineChartData(
-                  gridData: FlGridData(show: false),
-                  titlesData: FlTitlesData(
-                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  borderData: FlBorderData(show: false),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: [
-                        const FlSpot(0, 3),
-                        const FlSpot(1, 4),
-                        const FlSpot(2, 3.5),
-                        const FlSpot(3, 5),
-                        const FlSpot(4, 4),
-                        const FlSpot(5, 6),
-                        const FlSpot(6, 5.5),
-                      ],
-                      isCurved: true,
-                      color: Theme.of(context).primaryColor,
-                      barWidth: 3,
-                      dotData: FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        color: Theme.of(context).primaryColor.withOpacity(0.2),
+              child: _weeklyData.isEmpty
+                  ? const Center(child: Text('No data available'))
+                  : LineChart(
+                      LineChartData(
+                        gridData: FlGridData(show: false),
+                        titlesData: FlTitlesData(
+                          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                if (index >= 0 && index < _weeklyData.length) {
+                                  return Text(
+                                    _weeklyData[index]['dayName'],
+                                    style: const TextStyle(fontSize: 12),
+                                  );
+                                }
+                                return const Text('');
+                              },
+                            ),
+                          ),
+                        ),
+                        borderData: FlBorderData(show: false),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: _weeklyData.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final data = entry.value;
+                              final percentage = data['percentage'] / 100;
+                              return FlSpot(index.toDouble(), percentage * 6); // Scale to 0-6 for better visibility
+                            }).toList(),
+                            isCurved: true,
+                            color: Theme.of(context).primaryColor,
+                            barWidth: 3,
+                            dotData: FlDotData(show: true),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              color: Theme.of(context).primaryColor.withOpacity(0.2),
+                            ),
+                          ),
+                        ],
+                        minY: 0,
+                        maxY: 6,
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),
       ),
     );
   }
-
   Widget _buildSectorPerformance() {
     return Card(
       elevation: 4,
@@ -209,24 +285,61 @@ class StatisticsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Sector Performance',
+              'Sector Performance (Last 30 Days)',
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            _buildSectorProgressBar('Diet', 0.85, Colors.green),
-            const SizedBox(height: 12),
-            _buildSectorProgressBar('Gym', 0.70, Colors.blue),
-            const SizedBox(height: 12),
-            _buildSectorProgressBar('Finance', 0.90, Colors.purple),
-            const SizedBox(height: 12),
-            _buildSectorProgressBar('Sleep', 0.65, Colors.indigo),
+            if (_sectorPerformance.isEmpty)
+              const Center(
+                child: Text(
+                  'No sector data available',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              )
+            else
+              ..._sectorPerformance.entries.map((entry) {
+                final color = _getSectorColor(entry.key);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildSectorProgressBar(entry.key, entry.value, color),
+                );
+              }).toList(),
           ],
         ),
       ),
     );
+  }
+
+  Color _getSectorColor(String sectorName) {
+    // Try to get color from SectorService if available
+    try {
+      final sectors = SectorService.getAvailableColors();
+      final colorIndex = sectorName.hashCode % sectors.length;
+      return sectors[colorIndex]['color'] as Color;
+    } catch (e) {
+      // Fallback colors
+      switch (sectorName.toLowerCase()) {
+        case 'diet':
+        case 'food':
+          return Colors.green;
+        case 'gym':
+        case 'fitness':
+          return Colors.blue;
+        case 'finance':
+          return Colors.purple;
+        case 'sleep':
+          return Colors.indigo;
+        case 'work':
+          return Colors.orange;
+        case 'education':
+          return Colors.teal;
+        default:
+          return Colors.grey;
+      }
+    }
   }
 
   Widget _buildSectorProgressBar(String sector, double progress, Color color) {
